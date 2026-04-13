@@ -7,13 +7,14 @@ export interface FileItem {
   content?: string;
   parentId?: string;
   isOpen?: boolean;
-  relatedScreens?: string[]; // For filtering
+  relatedScreens?: string[];
 }
 
 export interface ScreenItem {
   id: string;
   name: string;
   isSelected: boolean;
+  isDefault?: boolean;
 }
 
 export interface GameObject {
@@ -29,6 +30,7 @@ export interface GameObject {
   opacity: number;
   zIndex: number;
   visible: boolean;
+  screenId?: string;
   text?: string;
   fontSize?: number;
 }
@@ -60,6 +62,8 @@ export interface EngineState {
   chatHeight: number;
   gridSize: number;
   snapToGrid: boolean;
+  showGrid: boolean;
+  gridOpacity: number;
   zoom: number;
   viewportWidth: number;
   viewportHeight: number;

@@ -12,37 +12,28 @@ import {
   Plus, 
   Upload, 
   Send, 
-  MoreVertical, 
   Folder, 
   FileCode, 
   Play, 
   Save,
-  MessageSquare,
-  Maximize2,
-  Minimize2,
   Home,
   Trash2,
   Edit2,
-  Package,
   FolderOpen,
   Box,
   Grid,
   Type,
   Square,
   MousePointer2,
-  RotateCw,
   Layers,
-  ZoomIn,
-  ZoomOut,
   Eye,
   EyeOff,
   ArrowUp,
   ArrowDown,
-  Move,
   Layout,
-  Maximize
 } from 'lucide-react';
 import { EditorMode, EngineState, FileItem, ScreenItem, GameObject, Project } from './types';
+import Viewport from './components/Viewport';
 
 // --- Mock Data ---
 const MOCK_PROJECTS: Project[] = [
@@ -78,15 +69,15 @@ const INITIAL_FILES: FileItem[] = [
 ];
 
 const INITIAL_SCREENS: ScreenItem[] = [
-  { id: 's1', name: 'Main Menu', isSelected: false },
+  { id: 's1', name: 'Main Menu', isSelected: false, isDefault: true },
   { id: 's2', name: 'Level 1', isSelected: false },
   { id: 's3', name: 'Game Over', isSelected: false },
 ];
 
 const INITIAL_OBJECTS: GameObject[] = [
-  { id: 'obj1', name: 'Player', type: 'sprite', x: 100, y: 150, width: 50, height: 50, rotation: 0, color: '#6366f1', opacity: 1, zIndex: 1, visible: true },
-  { id: 'obj2', name: 'Enemy', type: 'sprite', x: 400, y: 100, width: 40, height: 40, rotation: 0, color: '#ef4444', opacity: 1, zIndex: 1, visible: true },
-  { id: 'obj3', name: 'Title', type: 'text', x: 200, y: 50, width: 200, height: 40, rotation: 0, color: '#ffffff', opacity: 1, zIndex: 2, visible: true, text: 'Elite Engine', fontSize: 24 },
+  { id: 'obj1', name: 'Player', type: 'sprite', x: 100, y: 150, width: 50, height: 50, rotation: 0, color: '#6366f1', opacity: 1, zIndex: 1, visible: true, screenId: 's1' },
+  { id: 'obj2', name: 'Enemy', type: 'sprite', x: 400, y: 100, width: 40, height: 40, rotation: 0, color: '#ef4444', opacity: 1, zIndex: 1, visible: true, screenId: 's2' },
+  { id: 'obj3', name: 'Title', type: 'text', x: 180, y: 40, width: 200, height: 40, rotation: 0, color: '#ffffff', opacity: 1, zIndex: 2, visible: true, screenId: 's1', text: 'Elite Engine', fontSize: 24 },
 ];
 
 export default function App() {
@@ -104,6 +95,8 @@ export default function App() {
     chatHeight: 120,
     gridSize: 20,
     snapToGrid: true,
+    showGrid: true,
+    gridOpacity: 0.5,
     zoom: 1,
     viewportWidth: 667,
     viewportHeight: 375,
@@ -128,20 +121,25 @@ export default function App() {
   const [aiMode, setAiMode] = useState<'chat' | 'command'>('chat');
   const [chatInput, setChatInput] = useState('');
 
-  const addObject = () => {
+  const addObject = (type: 'sprite' | 'text' = 'sprite') => {
+    const activeScreen = state.screens.find(s => s.isSelected) || state.screens.find(s => s.isDefault) || state.screens[0];
+    const colors = ['#6366f1', '#22d3ee', '#f59e0b', '#10b981', '#f43f5e', '#a78bfa'];
     const newObj: GameObject = {
       id: Math.random().toString(36).substr(2, 9),
-      name: `Object ${state.objects.length + 1}`,
-      type: 'sprite',
-      x: 50,
-      y: 50,
-      width: 40,
-      height: 40,
+      name: type === 'text' ? `Text ${state.objects.length + 1}` : `Sprite ${state.objects.length + 1}`,
+      type,
+      x: 80 + Math.random() * 400,
+      y: 60 + Math.random() * 200,
+      width: type === 'text' ? 140 : 44,
+      height: type === 'text' ? 32 : 44,
       rotation: 0,
-      color: '#' + Math.floor(Math.random()*16777215).toString(16),
+      color: type === 'text' ? '#ffffff' : colors[Math.floor(Math.random() * colors.length)],
       opacity: 1,
       zIndex: state.objects.length + 1,
-      visible: true
+      visible: true,
+      screenId: activeScreen?.id,
+      text: type === 'text' ? 'New Text' : undefined,
+      fontSize: type === 'text' ? 16 : undefined,
     };
     setState(prev => ({ ...prev, objects: [...prev.objects, newObj], selectedObjectId: newObj.id }));
   };
@@ -637,13 +635,20 @@ export default function App() {
             </>
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-2 border-b border-engine-border">
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="Search objects..." 
-                    className="w-full bg-engine-bg border border-engine-border rounded-md px-2 py-1 text-[10px] outline-none focus:border-engine-accent"
-                  />
+              <div className="p-2 border-b border-engine-border space-y-2">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => addObject('sprite')}
+                    className="flex items-center justify-center gap-1 py-1.5 bg-engine-border rounded-md text-[10px] font-bold hover:bg-engine-accent hover:text-white transition-all uppercase tracking-wider"
+                  >
+                    <Square size={11} /> Sprite
+                  </button>
+                  <button
+                    onClick={() => addObject('text')}
+                    className="flex items-center justify-center gap-1 py-1.5 bg-engine-border rounded-md text-[10px] font-bold hover:bg-engine-accent hover:text-white transition-all uppercase tracking-wider"
+                  >
+                    <Type size={11} /> Text
+                  </button>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
@@ -725,213 +730,22 @@ export default function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 overflow-hidden bg-[#0a0b0d]"
+                    className="absolute inset-0"
                   >
-                    {/* Rulers */}
-                    <div className="absolute top-0 left-0 right-0 h-5 bg-engine-panel border-b border-engine-border z-30 flex items-center overflow-hidden">
-                      <div className="w-5 h-full border-r border-engine-border shrink-0 bg-engine-bg" />
-                      <div className="flex-1 relative h-full">
-                        {Array.from({ length: 50 }).map((_, i) => (
-                          <div 
-                            key={i} 
-                            className="absolute top-0 h-full border-l border-engine-border/30 flex flex-col justify-end"
-                            style={{ left: i * 50 * state.zoom }}
-                          >
-                            <span className="text-[8px] text-engine-text-muted ml-1 mb-0.5">{i * 50}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="absolute top-0 left-0 bottom-0 w-5 bg-engine-panel border-r border-engine-border z-30 flex flex-col items-center overflow-hidden">
-                      <div className="h-5 w-full border-b border-engine-border shrink-0 bg-engine-bg" />
-                      <div className="flex-1 relative w-full">
-                        {Array.from({ length: 50 }).map((_, i) => (
-                          <div 
-                            key={i} 
-                            className="absolute left-0 w-full border-t border-engine-border/30 flex items-end"
-                            style={{ top: i * 50 * state.zoom }}
-                          >
-                            <span className="text-[8px] text-engine-text-muted ml-0.5 mb-1 origin-bottom-left -rotate-90">{i * 50}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Editor Canvas Container */}
-                    <div className="absolute inset-0 pt-5 pl-5 overflow-auto custom-scrollbar">
-                      <div 
-                        className="relative bg-[#15181e] shadow-inner"
-                        style={{ 
-                          width: 2000 * state.zoom, 
-                          height: 2000 * state.zoom,
-                          backgroundImage: `
-                            linear-gradient(to right, #2d3139 1px, transparent 1px),
-                            linear-gradient(to bottom, #2d3139 1px, transparent 1px)
-                          `,
-                          backgroundSize: `${state.gridSize * state.zoom}px ${state.gridSize * state.zoom}px`
-                        }}
-                      >
-                        {/* Viewport Visible Area Lines */}
-                        <div 
-                          className="absolute border-2 border-engine-accent/40 pointer-events-none z-10"
-                          style={{ 
-                            left: 100 * state.zoom, 
-                            top: 100 * state.zoom, 
-                            width: state.viewportWidth * state.zoom, 
-                            height: state.viewportHeight * state.zoom,
-                            boxShadow: '0 0 0 5000px rgba(0,0,0,0.3)'
-                          }}
-                        >
-                          <div className="absolute -top-6 left-0 bg-engine-accent text-white text-[10px] px-2 py-0.5 rounded-t-md font-bold uppercase tracking-widest">
-                            Game Viewport ({state.viewportWidth}x{state.viewportHeight})
-                          </div>
-                        </div>
-
-                        {/* Objects Layer */}
-                        <div 
-                          className="absolute"
-                          style={{ left: 100 * state.zoom, top: 100 * state.zoom }}
-                        >
-                          {state.objects.filter(o => o.visible).sort((a, b) => a.zIndex - b.zIndex).map(obj => (
-                            <motion.div
-                              key={obj.id}
-                              drag
-                              dragMomentum={false}
-                              onDragStart={() => setState(prev => ({ ...prev, selectedObjectId: obj.id }))}
-                              onDragEnd={(e, info) => {
-                                const newX = obj.x + info.offset.x / state.zoom;
-                                const newY = obj.y + info.offset.y / state.zoom;
-                                const snappedX = state.snapToGrid ? Math.round(newX / state.gridSize) * state.gridSize : newX;
-                                const snappedY = state.snapToGrid ? Math.round(newY / state.gridSize) * state.gridSize : newY;
-                                updateSelectedObject({ x: snappedX, y: snappedY });
-                              }}
-                              className={`absolute cursor-move flex items-center justify-center group ${
-                                state.selectedObjectId === obj.id ? 'z-50' : ''
-                              }`}
-                              style={{ 
-                                left: obj.x * state.zoom, 
-                                top: obj.y * state.zoom, 
-                                width: obj.width * state.zoom, 
-                                height: obj.height * state.zoom, 
-                                backgroundColor: obj.type === 'sprite' ? obj.color : 'transparent',
-                                borderRadius: obj.type === 'sprite' ? '4px' : '0',
-                                rotate: `${obj.rotation}deg`,
-                                opacity: obj.opacity,
-                                color: obj.color,
-                                fontSize: (obj.fontSize || 16) * state.zoom,
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              {obj.type === 'text' && obj.text}
-                              
-                              {/* Selection Gizmo */}
-                              {state.selectedObjectId === obj.id && (
-                                <div className="absolute inset-0 border-2 border-engine-accent pointer-events-none">
-                                  <div className="absolute -top-1 -left-1 w-2 h-2 bg-white border border-engine-accent" />
-                                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-white border border-engine-accent" />
-                                  <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white border border-engine-accent" />
-                                  <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-white border border-engine-accent" />
-                                  <div className="absolute top-1/2 -right-1 w-2 h-2 -translate-y-1/2 bg-white border border-engine-accent" />
-                                  <div className="absolute -top-1 left-1/2 w-2 h-2 -translate-x-1/2 bg-white border border-engine-accent" />
-                                  
-                                  {/* Rotation Handle */}
-                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                    <div className="w-0.5 h-4 bg-engine-accent" />
-                                    <div className="w-3 h-3 bg-white border-2 border-engine-accent rounded-full cursor-alias" />
-                                  </div>
-                                </div>
-                              )}
-                            </motion.div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Floating Controls */}
-                    <div className="absolute bottom-4 right-4 z-40 flex items-center gap-2 bg-engine-panel border border-engine-border p-1.5 rounded-xl shadow-2xl">
-                      <button 
-                        onClick={() => setState(prev => ({ ...prev, zoom: Math.max(prev.zoom - 0.1, 0.2) }))}
-                        className="p-2 hover:bg-engine-border rounded-lg transition-all text-engine-text-muted"
-                      >
-                        <ZoomOut size={16} />
-                      </button>
-                      <span className="text-[10px] font-bold w-12 text-center">{Math.round(state.zoom * 100)}%</span>
-                      <button 
-                        onClick={() => setState(prev => ({ ...prev, zoom: Math.min(prev.zoom + 0.1, 3) }))}
-                        className="p-2 hover:bg-engine-border rounded-lg transition-all text-engine-text-muted"
-                      >
-                        <ZoomIn size={16} />
-                      </button>
-                      <div className="w-[1px] h-4 bg-engine-border mx-1" />
-                      <button 
-                        onClick={() => setState(prev => ({ ...prev, zoom: 1 }))}
-                        className="p-2 hover:bg-engine-border rounded-lg transition-all text-engine-text-muted"
-                        title="Reset Zoom"
-                      >
-                        <Maximize size={16} />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const container = document.querySelector('.pt-5.pl-5');
-                          if (container) {
-                            container.scrollTo({
-                              left: 100 * state.zoom - 50,
-                              top: 100 * state.zoom - 50,
-                              behavior: 'smooth'
-                            });
-                          }
-                        }}
-                        className="p-2 hover:bg-engine-border rounded-lg transition-all text-engine-text-muted"
-                        title="Center Viewport"
-                      >
-                        <Move size={16} />
-                      </button>
-                    </div>
-
-                    {/* Level Editor Toolbar */}
-                    <div className="absolute top-10 left-10 z-20 flex flex-col gap-2">
-                      <div className="bg-engine-panel border border-engine-border p-1.5 rounded-xl flex flex-col gap-1 shadow-2xl backdrop-blur-md">
-                        <button 
-                          onClick={addObject}
-                          className="p-2.5 hover:bg-engine-accent hover:text-white rounded-lg transition-all text-engine-text-muted"
-                          title="Add Sprite"
-                        >
-                          <Square size={20} />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const newObj: GameObject = {
-                              id: Math.random().toString(36).substr(2, 9),
-                              name: `Text ${state.objects.length + 1}`,
-                              type: 'text',
-                              x: 50,
-                              y: 50,
-                              width: 150,
-                              height: 30,
-                              rotation: 0,
-                              color: '#ffffff',
-                              opacity: 1,
-                              zIndex: state.objects.length + 1,
-                              visible: true,
-                              text: 'New Text',
-                              fontSize: 16
-                            };
-                            setState(prev => ({ ...prev, objects: [...prev.objects, newObj], selectedObjectId: newObj.id }));
-                          }}
-                          className="p-2.5 hover:bg-engine-accent hover:text-white rounded-lg transition-all text-engine-text-muted"
-                          title="Add Text"
-                        >
-                          <Type size={20} />
-                        </button>
-                        <div className="h-[1px] bg-engine-border mx-1 my-1" />
-                        <button className="p-2.5 hover:bg-engine-border rounded-lg transition-all text-engine-text-muted" title="Select Tool">
-                          <MousePointer2 size={20} />
-                        </button>
-                        <button className="p-2.5 hover:bg-engine-border rounded-lg transition-all text-engine-text-muted" title="Move Tool">
-                          <Move size={20} />
-                        </button>
-                      </div>
-                    </div>
+                    <Viewport
+                      objects={state.objects}
+                      selectedObjectId={state.selectedObjectId}
+                      screens={state.screens}
+                      gridSize={state.gridSize}
+                      showGrid={state.showGrid}
+                      gridOpacity={state.gridOpacity}
+                      snapToGrid={state.snapToGrid}
+                      onSelectObject={(id) => setState(prev => ({ ...prev, selectedObjectId: id }))}
+                      onUpdateObject={(id, updates) => setState(prev => ({
+                        ...prev,
+                        objects: prev.objects.map(o => o.id === id ? { ...o, ...updates } : o)
+                      }))}
+                    />
                   </motion.div>
                 )}
 
@@ -1221,6 +1035,20 @@ export default function App() {
                   </div>
 
                   <div className="space-y-2">
+                    <label className="text-[10px] text-engine-text-muted uppercase font-bold">Assign to Screen</label>
+                    <select
+                      value={state.objects.find(o => o.id === state.selectedObjectId)?.screenId || ''}
+                      onChange={(e) => updateSelectedObject({ screenId: e.target.value || undefined })}
+                      className="w-full bg-engine-bg border border-engine-border rounded px-2 py-1.5 text-xs outline-none focus:border-engine-accent appearance-none"
+                    >
+                      <option value="">— All Screens —</option>
+                      {state.screens.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}{s.isDefault ? ' (Default)' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
                     <label className="text-[10px] text-engine-text-muted uppercase font-bold">Visibility</label>
                     <button 
                       onClick={() => {
@@ -1330,6 +1158,15 @@ export default function App() {
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
+                      <span className="text-xs">Show Grid</span>
+                      <button
+                        onClick={() => setState(prev => ({ ...prev, showGrid: !prev.showGrid }))}
+                        className={`w-10 h-5 rounded-full transition-all relative ${state.showGrid ? 'bg-engine-accent' : 'bg-engine-border'}`}
+                      >
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${state.showGrid ? 'left-6' : 'left-1'}`} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span className="text-xs">Snap to Grid</span>
                       <button 
                         onClick={() => setState(prev => ({ ...prev, snapToGrid: !prev.snapToGrid }))}
@@ -1350,6 +1187,21 @@ export default function App() {
                         step="4"
                         value={state.gridSize}
                         onChange={(e) => setState(prev => ({ ...prev, gridSize: parseInt(e.target.value) }))}
+                        className="w-full accent-engine-accent"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] text-engine-text-muted font-bold uppercase">
+                        <span>Grid Opacity</span>
+                        <span>{Math.round(state.gridOpacity * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.05"
+                        max="1"
+                        step="0.05"
+                        value={state.gridOpacity}
+                        onChange={(e) => setState(prev => ({ ...prev, gridOpacity: parseFloat(e.target.value) }))}
                         className="w-full accent-engine-accent"
                       />
                     </div>
