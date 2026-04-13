@@ -1,0 +1,5 @@
+{
+  "name": "Elite Engine",
+  "description": "A mobile-first AI-powered game engine with visual level editing, code editing, and screen management.",
+  "requestFramePermissions": []
+}
